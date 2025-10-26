@@ -1,0 +1,100 @@
+# Weather E-Ink Display Configuration
+# Optimized for Raspberry Pi Zero
+
+# Weather API Configuration
+weather:
+  # API provider: openweathermap, weatherapi, etc.
+  provider: "openweathermap"
+  api_key: "YOUR_API_KEY_HERE"
+
+  # Location
+  latitude: 40.7128
+  longitude: -74.0060
+  city: "New York"
+
+  # Units: metric, imperial
+  units: "metric"
+
+  # Cache duration in seconds (default: 30 minutes)
+  # Longer cache = less API calls = less CPU/network usage
+  cache_duration: 1800
+
+# Display Configuration
+display:
+  # E-ink display type: waveshare_2in13, waveshare_4in2, etc.
+  type: "waveshare_2in13"
+
+  # Display rotation: 0, 90, 180, 270
+  rotation: 0
+
+  # Partial refresh mode (faster, less wear, but may ghost)
+  # Set to false for full refresh every time (cleaner but slower)
+  partial_refresh: true
+
+  # Number of partial refreshes before forcing full refresh
+  # This prevents ghosting buildup
+  partial_refresh_limit: 10
+
+# Update Schedule
+update:
+  # Update interval in seconds (default: 30 minutes)
+  # Longer intervals = less resource usage
+  interval: 1800
+
+  # Only update display if weather data has changed
+  # This saves e-ink refresh cycles and power
+  update_only_on_change: true
+
+  # Quiet hours: don't update display during these hours
+  # Format: 24-hour time (e.g., 23 = 11 PM)
+  quiet_hours_start: 23
+  quiet_hours_end: 7
+
+# Performance Tuning for Raspberry Pi Zero
+performance:
+  # Maximum memory usage for image processing (MB)
+  max_image_memory: 50
+
+  # API request timeout (seconds)
+  api_timeout: 10
+
+  # Enable aggressive garbage collection
+  gc_enabled: true
+
+  # Low power mode: reduces CPU frequency when idle
+  low_power_mode: true
+
+  # Maximum CPU usage percentage (0-100)
+  # Throttles operations if exceeded
+  max_cpu_percent: 80
+
+# Logging
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR
+  level: "INFO"
+
+  # Log file path
+  file: "/var/log/weather_eink/app.log"
+
+  # Max log file size in MB
+  max_size: 10
+
+  # Number of backup log files to keep
+  backup_count: 3
+
+  # Log performance metrics
+  log_performance: true
+
+# Error Handling
+error_handling:
+  # Retry failed API calls
+  retry_enabled: true
+
+  # Maximum retry attempts
+  max_retries: 3
+
+  # Retry backoff multiplier (seconds)
+  retry_backoff: 2
+
+  # Show error message on display if update fails
+  show_errors_on_display: true
