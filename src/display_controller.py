@@ -13,6 +13,146 @@ from PIL import Image, ImageDraw, ImageFont
 
 logger = logging.getLogger(__name__)
 
+# WMO Weather Code to Description Mapping
+WMO_CODES = {
+    0: "Clear", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+    45: "Fog", 48: "Fog",
+    51: "Drizzle", 53: "Drizzle", 55: "Drizzle",
+    61: "Rain", 63: "Rain", 65: "Heavy rain",
+    80: "Showers", 81: "Showers", 82: "Heavy showers",
+    95: "Thunderstorm", 96: "TS w/ hail", 99: "TS w/ hail"
+}
+
+
+# ========== Weather Icon Drawing Functions ==========
+
+def choose_icon_name(wcode: int) -> str:
+    """Map WMO weather code to icon name."""
+    if wcode in (0, 1):
+        return "sun"
+    if wcode == 2:
+        return "partly"
+    if wcode == 3:
+        return "cloud"
+    if wcode in (45, 48):
+        return "fog"
+    if wcode in (51, 53, 55):
+        return "drizzle"
+    if wcode in (61, 63, 65):
+        return "rain"
+    if wcode in (80, 81, 82):
+        return "showers"
+    if wcode in (95, 96, 99):
+        return "thunder"
+    return "cloud"
+
+
+def draw_sun(d, x, y, r):
+    """Draw a sun icon with rays."""
+    import math
+    d.ellipse((x-r, y-r, x+r, y+r), outline=0, width=6)
+    for i in range(12):
+        a = i * (360 / 12)
+        r1 = int(r * 1.35)
+        r2 = int(r * 1.7)
+        x1 = x + int(r1 * math.cos(math.radians(a)))
+        y1 = y + int(r1 * math.sin(math.radians(a)))
+        x2 = x + int(r2 * math.cos(math.radians(a)))
+        y2 = y + int(r2 * math.sin(math.radians(a)))
+        d.line((x1, y1, x2, y2), fill=0, width=5)
+
+
+def draw_cloud(d, box):
+    """Draw a cloud icon."""
+    x0, y0, x1, y1 = box
+    w = x1 - x0
+    h = y1 - y0
+    cx, cy = x0 + int(w * 0.5), y0 + int(h * 0.55)
+    r1 = int(h * 0.30)
+    r2 = int(h * 0.24)
+    r3 = int(h * 0.20)
+    # Three lobes + base
+    d.ellipse((cx - int(w * 0.22) - r1, cy - r1, cx - int(w * 0.22) + r1, cy + r1),
+              fill=1, outline=0, width=5)
+    d.ellipse((cx + r1 - int(w * 0.10) - r2, cy - r2, cx + r1 - int(w * 0.10) + r2, cy + r2),
+              fill=1, outline=0, width=5)
+    d.ellipse((cx - int(w * 0.1) - r3, cy - int(h * 0.2) - r3,
+               cx - int(w * 0.1) + r3, cy - int(h * 0.2) + r3),
+              fill=1, outline=0, width=5)
+    d.rectangle((x0 + int(w * 0.08), cy, x1 - int(w * 0.08), cy + int(h * 0.25)),
+                fill=1, outline=0, width=0)
+    # Outline bottom
+    d.arc((x0 + int(w * 0.02), cy - int(h * 0.05), x1 - int(w * 0.02), cy + int(h * 0.55)),
+          0, 180, fill=0, width=5)
+
+
+def draw_raindrops(d, x, y, spacing, n, size):
+    """Draw rain drops."""
+    for i in range(n):
+        xi = x + i * spacing
+        d.ellipse((xi - size, y, xi + size, y + size * 2), outline=0, width=4)
+
+
+def draw_zap(d, x, y, scale):
+    """Draw a lightning bolt."""
+    s = scale
+    pts = [(x, y), (x + int(0.22 * s), y), (x - int(0.05 * s), y + int(0.35 * s)),
+           (x + int(0.18 * s), y + int(0.35 * s)), (x - int(0.28 * s), y + int(0.95 * s)),
+           (x, y + int(0.45 * s))]
+    d.polygon(pts, outline=0, fill=0)
+
+
+def draw_fog(d, x0, y0, w, lines, gap, thickness=6):
+    """Draw fog lines."""
+    y = y0
+    for _ in range(lines):
+        d.line((x0, y, x0 + w, y), fill=0, width=thickness)
+        y += gap
+
+
+def draw_icon(icon_name: str, size: int = 240) -> Image.Image:
+    """
+    Draw a weather icon as a vector-style image.
+
+    Args:
+        icon_name: Icon name (sun, cloud, rain, etc.)
+        size: Icon size in pixels (default 240)
+
+    Returns:
+        PIL Image with the drawn icon
+    """
+    img = Image.new("1", (size, size), 1)
+    d = ImageDraw.Draw(img)
+    pad = 14
+
+    if icon_name == "sun":
+        draw_sun(d, size // 2, size // 2, size // 3)
+    elif icon_name == "partly":
+        # Small sun behind cloud
+        draw_sun(d, int(size * 0.35), int(size * 0.35), int(size * 0.22))
+        draw_cloud(d, (pad, int(size * 0.35), size - pad, size - int(size * 0.05)))
+    elif icon_name == "cloud":
+        draw_cloud(d, (pad, int(size * 0.28), size - pad, size - int(size * 0.05)))
+    elif icon_name == "drizzle":
+        draw_cloud(d, (pad, int(size * 0.22), size - pad, int(size * 0.70)))
+        draw_raindrops(d, int(size * 0.25), int(size * 0.72), int(size * 0.16), 5, int(size * 0.035))
+    elif icon_name == "rain":
+        draw_cloud(d, (pad, int(size * 0.18), size - pad, int(size * 0.66)))
+        draw_raindrops(d, int(size * 0.20), int(size * 0.70), int(size * 0.14), 6, int(size * 0.045))
+    elif icon_name == "showers":
+        draw_cloud(d, (pad, int(size * 0.14), size - pad, int(size * 0.62)))
+        draw_raindrops(d, int(size * 0.18), int(size * 0.66), int(size * 0.14), 6, int(size * 0.05))
+    elif icon_name == "thunder":
+        draw_cloud(d, (pad, int(size * 0.14), size - pad, int(size * 0.64)))
+        draw_zap(d, int(size * 0.50), int(size * 0.70), int(size * 0.40))
+    elif icon_name == "fog":
+        draw_cloud(d, (pad, int(size * 0.20), size - pad, int(size * 0.58)))
+        draw_fog(d, int(size * 0.12), int(size * 0.70), int(size * 0.76), 3, int(size * 0.10), thickness=6)
+    else:
+        draw_cloud(d, (pad, int(size * 0.22), size - pad, int(size * 0.68)))
+
+    return img
+
 
 class DisplayController:
     """
@@ -171,51 +311,119 @@ class DisplayController:
 
     def _render_weather_image(self, weather_data: Dict[str, Any]) -> Image.Image:
         """
-        Render weather data to an image.
+        Render weather data to an image with big icon layout.
 
-        This is a simplified version. In production, you'd add:
-        - Custom fonts
-        - Weather icons
-        - Layouts for different display sizes
+        Layout:
+        - Header with location and date/time
+        - Current weather (top-left)
+        - Big weather icon (bottom-left)
+        - Next 6 hours forecast (right side)
+        - Footer with data source
         """
-        # Create image with white background
-        image = Image.new('1', (self.width, self.height), 255)  # '1' = 1-bit pixels (black/white)
+        from datetime import datetime
+
+        W, H = self.width, self.height  # 800x480 for Waveshare 4.26"
+        image = Image.new('1', (W, H), 1)  # '1' = 1-bit pixels, white background
         draw = ImageDraw.Draw(image)
 
         try:
-            # Use default font (or load custom font if available)
-            font_large = ImageFont.load_default()
-            font_small = ImageFont.load_default()
+            # Load fonts (using DejaVu Sans if available, fallback to default)
+            try:
+                font_h1 = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 44)
+                font_h2 = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 28)
+                font_m = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 22)
+                font_s = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18)
+            except Exception:
+                logger.warning("Could not load DejaVu fonts, using default")
+                font_h1 = ImageFont.load_default()
+                font_h2 = ImageFont.load_default()
+                font_m = ImageFont.load_default()
+                font_s = ImageFont.load_default()
+
+            # Get current time
+            now = datetime.now()
 
             # Extract weather data
             temp = weather_data.get('temperature', 0)
-            desc = weather_data.get('description', 'N/A')
+            feels_like = weather_data.get('feels_like', temp)
             humidity = weather_data.get('humidity', 0)
-            location = weather_data.get('location', 'Unknown')
+            wind_speed = weather_data.get('wind_speed', 0)
+            weather_code = int(weather_data.get('weather_code', 0))
+            description = WMO_CODES.get(weather_code, f"Code {weather_code}")
+            location = weather_data.get('location', 'São Paulo')
 
-            # Layout (simplified)
-            y_offset = 10
+            # Header
+            draw.text((20, 18), f"{location} Weather", font=font_h1, fill=0)
+            draw.text((20, 72), now.strftime("%a %d %b %Y • %H:%M"), font=font_m, fill=0)
+            draw.line((20, 100, W - 20, 100), fill=0, width=2)
 
-            # Location
-            draw.text((10, y_offset), location, font=font_small, fill=0)
-            y_offset += 20
+            # Current weather block (top-left)
+            y = 120
+            draw.text((20, y), f"{temp:.0f}°C", font=font_h1, fill=0)
+            y += 50
+            draw.text((20, y), description, font=font_h2, fill=0)
+            y += 34
+            draw.text((20, y), f"Feels {feels_like:.0f}°  Hum {humidity}%  Wind {wind_speed:.0f} km/h",
+                     font=font_m, fill=0)
 
-            # Temperature (large)
-            temp_text = f"{temp:.1f}°C" if self.config.get('weather', {}).get('units') == 'metric' else f"{temp:.1f}°F"
-            draw.text((10, y_offset), temp_text, font=font_large, fill=0)
-            y_offset += 30
+            # BIG weather icon (bottom-left)
+            icon_name = choose_icon_name(weather_code)
+            icon_img = draw_icon(icon_name, size=240)
+            # Place with margin from left/bottom
+            bx = 20
+            by = H - 20 - icon_img.height
+            image.paste(icon_img, (bx, by))
 
-            # Description
-            draw.text((10, y_offset), desc.capitalize(), font=font_small, fill=0)
-            y_offset += 20
+            # Next 6 hours forecast (right side)
+            hourly_data = weather_data.get('hourly', {})
+            times = hourly_data.get('time', [])
+            temps = hourly_data.get('temperature', [])
+            pops = hourly_data.get('precipitation_probability', [])
+            codes = hourly_data.get('weather_code', [])
 
-            # Humidity
-            draw.text((10, y_offset), f"Humidity: {humidity}%", font=font_small, fill=0)
+            rows = []
+            for i, time_str in enumerate(times):
+                if len(rows) == 6:
+                    break
+                try:
+                    # Parse time (format: "2024-01-01T12:00" or similar)
+                    if 'T' in time_str:
+                        dt = datetime.strptime(time_str, "%Y-%m-%dT%H:%M")
+                    else:
+                        continue
+                except Exception:
+                    continue
+
+                # Only show future hours
+                if dt >= now:
+                    T = temps[i] if i < len(temps) and temps[i] is not None else 0
+                    P = pops[i] if i < len(pops) and pops[i] is not None else 0
+                    C = int(codes[i]) if i < len(codes) and codes[i] is not None else 0
+                    desc_hour = WMO_CODES.get(C, f"Code {C}")
+                    rows.append((dt.strftime("%H:%M"), T, P, desc_hour))
+
+            # Draw forecast section
+            gx, gy = 430, 120
+            draw.text((gx, gy), "Next hours", font=font_h2, fill=0)
+            gy += 10
+            draw.line((gx, gy + 22, W - 20, gy + 22), fill=0, width=1)
+            gy += 35
+
+            for hh, T, P, desc_hour in rows:
+                draw.text((gx, gy), f"{hh}  {T:.0f}°C  POP {P:>2}%", font=font_m, fill=0)
+                draw.text((gx + 250, gy), desc_hour, font=font_m, fill=0)
+                gy += 40
+
+            # Footer
+            draw.line((20, H - 58, W - 20, H - 58), fill=0, width=1)
+            draw.text((20, H - 48), "Data: open-meteo.com • Updates every 15 min",
+                     font=font_s, fill=0)
 
         except Exception as e:
-            logger.error(f"Error rendering weather image: {e}")
+            logger.error(f"Error rendering weather image: {e}", exc_info=True)
             # Fallback: simple error message
-            draw.text((10, 10), "Error", font=font_small, fill=0)
+            draw.text((10, 10), "Weather update failed", fill=0)
+            draw.text((10, 30), str(e)[:70], fill=0)
 
         # Apply rotation if needed
         if self.rotation != 0:

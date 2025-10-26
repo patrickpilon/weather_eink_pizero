@@ -102,7 +102,8 @@ class WeatherAPIClient:
         Returns:
             Weather data or None if all retries fail
         """
-        if not self.api_key:
+        # Open-Meteo doesn't require an API key
+        if not self.api_key and self.provider != 'openmeteo':
             logger.error("No API key configured")
             return None
 
@@ -116,6 +117,8 @@ class WeatherAPIClient:
                     data = self._fetch_openweathermap()
                 elif self.provider == 'weatherapi':
                     data = self._fetch_weatherapi()
+                elif self.provider == 'openmeteo':
+                    data = self._fetch_openmeteo()
                 else:
                     logger.error(f"Unsupported weather provider: {self.provider}")
                     return None
@@ -206,6 +209,47 @@ class WeatherAPIClient:
             'icon': raw_data['current']['condition']['icon'],
             'location': raw_data['location']['name'],
             'timestamp': int(time.time()),
+        }
+
+    def _fetch_openmeteo(self) -> Optional[Dict[str, Any]]:
+        """
+        Fetch data from Open-Meteo API (free, no API key required).
+        Provides current weather + hourly forecast with precipitation probability.
+        """
+        url = "https://api.open-meteo.com/v1/forecast"
+        params = {
+            'latitude': self.latitude,
+            'longitude': self.longitude,
+            'current': 'temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,wind_speed_10m',
+            'hourly': 'temperature_2m,precipitation_probability,weather_code',
+            'forecast_days': 1,
+            'timezone': 'auto'
+        }
+
+        response = self.session.get(url, params=params, timeout=self.timeout)
+        response.raise_for_status()
+
+        raw_data = response.json()
+        current = raw_data.get('current', {})
+        hourly = raw_data.get('hourly', {})
+
+        # Normalize to common format
+        return {
+            'temperature': current.get('temperature_2m', 0),
+            'feels_like': current.get('apparent_temperature', 0),
+            'humidity': current.get('relative_humidity_2m', 0),
+            'wind_speed': current.get('wind_speed_10m', 0),
+            'weather_code': current.get('weather_code', 0),
+            'precipitation': current.get('precipitation', 0),
+            'location': self.weather_config.get('location_name', 'Unknown'),
+            'timestamp': int(time.time()),
+            # Include hourly data for forecast
+            'hourly': {
+                'time': hourly.get('time', []),
+                'temperature': hourly.get('temperature_2m', []),
+                'precipitation_probability': hourly.get('precipitation_probability', []),
+                'weather_code': hourly.get('weather_code', [])
+            }
         }
 
     def _load_from_file_cache(self) -> Optional[Dict[str, Any]]:
