@@ -247,10 +247,10 @@ class DisplayController:
         except ImportError as e:
             error_msg = str(e)
             if 'spidev' in error_msg or 'gpiozero' in error_msg:
-                # Expected error when hardware dependencies are not installed
-                logger.warning("Hardware dependencies not installed (spidev/gpiozero)")
-                logger.info("Install with: pip install spidev gpiozero")
-                logger.info("Using mock display driver (no physical display)")
+                # Expected when running on non-Raspberry Pi hardware (development/testing)
+                logger.info("Running without hardware dependencies (spidev/gpiozero)")
+                logger.info("Using mock display driver - no physical display output")
+                logger.debug("To use real hardware, install with: pip install -r requirements-hardware.txt")
             else:
                 # Unexpected import error
                 logger.error(f"Failed to import display driver: {e}")
