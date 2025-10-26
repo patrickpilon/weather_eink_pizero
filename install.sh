@@ -45,7 +45,7 @@ sudo apt-get install -y \
     python3-venv \
     python3-pil \
     libopenjp2-7 \
-    libtiff5 \
+    libtiff6 \
     git
 
 # Step 3: Create virtual environment
