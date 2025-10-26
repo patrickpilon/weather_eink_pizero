@@ -376,6 +376,8 @@ class MockPlatform:
 
     def __init__(self):
         logger.info("Mock platform initialized (no physical hardware)")
+        # Mock SPI object for compatibility
+        self.SPI = type('MockSPI', (), {'writebytes': lambda s, d: None, 'writebytes2': lambda s, d: None})()
 
     def digital_write(self, pin, value):
         pass
@@ -436,3 +438,6 @@ except Exception as e:
 
 for func in [x for x in dir(implementation) if not x.startswith('_')]:
     setattr(sys.modules[__name__], func, getattr(implementation, func))
+
+# Expose implementation object for dynamic attribute access (e.g., SPI after hardware init)
+setattr(sys.modules[__name__], 'implementation', implementation)
