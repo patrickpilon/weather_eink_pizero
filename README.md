@@ -84,7 +84,7 @@ The installation script will:
 ```bash
 # 1. Install system dependencies
 sudo apt-get update
-sudo apt-get install -y python3 python3-pip python3-venv python3-pil libopenjp2-7 libtiff5
+sudo apt-get install -y python3 python3-pip python3-venv python3-pil libopenjp2-7 libtiff6
 
 # 2. Create virtual environment
 python3 -m venv venv
