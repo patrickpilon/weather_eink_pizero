@@ -5,15 +5,16 @@
 weather:
   # API provider: openweathermap, weatherapi, openmeteo
   # openmeteo is free and doesn't require an API key (recommended)
-  provider: "openmeteo"
+  provider: "openweathermap"
 
   # API key (not needed for openmeteo)
-  api_key: "YOUR_API_KEY_HERE"
+  api_key: "8b543693303e50203f5fee8a82451d5c"
 
-  # Location
-  latitude: -23.55
-  longitude: -46.63
-  location_name: "São Paulo"  # Used for openmeteo display
+  # Location - Vila Nova Conceição, São Paulo, Brazil
+  # Rua João Lourenço area
+  latitude: -23.594
+  longitude: -46.674
+  location_name: "São Paulo - Vila Nova Conceição"
 
   # Units: metric, imperial
   units: "metric"
