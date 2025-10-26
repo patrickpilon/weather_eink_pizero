@@ -58,6 +58,7 @@ class DisplayController:
             'waveshare_2in13_v2': (250, 122),
             'waveshare_2in9': (296, 128),
             'waveshare_4in2': (400, 300),
+            'waveshare_4in26': (800, 480),
             'waveshare_7in5': (800, 480),
         }
 
@@ -79,18 +80,29 @@ class DisplayController:
         try:
             # Import display driver based on type
             if 'waveshare' in self.display_type.lower():
-                # Note: This is a placeholder. Actual import depends on installed library
-                # from waveshare_epd import epd2in13_v2
-                # self.display_driver = epd2in13_v2.EPD()
-                logger.warning("Display driver not initialized (placeholder)")
-                self.display_driver = MockDisplayDriver()
+                # Import appropriate Waveshare display driver
+                import sys
+                sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'lib'))
+
+                if self.display_type == 'waveshare_4in26':
+                    from waveshare_epd import epd4in26
+                    self.display_driver = epd4in26.EPD()
+                    logger.info("Loaded Waveshare 4.26\" display driver")
+                elif self.display_type == 'waveshare_2in13_v2':
+                    from waveshare_epd import epd2in13_v2
+                    self.display_driver = epd2in13_v2.EPD()
+                    logger.info("Loaded Waveshare 2.13\" V2 display driver")
+                else:
+                    logger.warning(f"No specific driver for {self.display_type}, using mock")
+                    self.display_driver = MockDisplayDriver()
             else:
                 logger.warning(f"Unsupported display type: {self.display_type}")
                 self.display_driver = MockDisplayDriver()
 
             # Initialize display
-            # self.display_driver.init()
-            logger.info("Display driver initialized")
+            if hasattr(self.display_driver, 'init') and not isinstance(self.display_driver, MockDisplayDriver):
+                self.display_driver.init()
+                logger.info("Display driver initialized")
 
         except ImportError as e:
             logger.error(f"Failed to import display driver: {e}")
@@ -217,8 +229,12 @@ class DisplayController:
 
     def _display_partial_refresh(self, image: Image.Image) -> None:
         """Perform partial display refresh (faster)."""
-        if hasattr(self.display_driver, 'display_partial'):
-            # Convert PIL image to format expected by driver
+        if hasattr(self.display_driver, 'display_Partial'):
+            # Waveshare drivers use getbuffer method
+            buffer = self._image_to_buffer(image)
+            self.display_driver.display_Partial(buffer)
+        elif hasattr(self.display_driver, 'display_partial'):
+            # Alternative method name
             buffer = self._image_to_buffer(image)
             self.display_driver.display_partial(buffer)
         else:
@@ -236,8 +252,10 @@ class DisplayController:
 
     def _image_to_buffer(self, image: Image.Image) -> bytes:
         """Convert PIL image to byte buffer for display driver."""
-        # This is display-driver specific
-        # Most e-ink drivers expect a byte array
+        # Waveshare drivers provide a getbuffer method
+        if hasattr(self.display_driver, 'getbuffer') and not isinstance(self.display_driver, MockDisplayDriver):
+            return self.display_driver.getbuffer(image)
+        # Fallback for mock or other drivers
         return image.tobytes()
 
     def clear_display(self) -> None:
@@ -245,7 +263,11 @@ class DisplayController:
         try:
             self._init_display_driver()
 
-            if hasattr(self.display_driver, 'clear'):
+            if hasattr(self.display_driver, 'Clear'):
+                # Waveshare drivers use Clear (capitalized)
+                self.display_driver.Clear()
+                logger.info("Display cleared")
+            elif hasattr(self.display_driver, 'clear'):
                 self.display_driver.clear()
                 logger.info("Display cleared")
             else:

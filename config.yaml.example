@@ -21,7 +21,7 @@ weather:
 
 # Display Configuration
 display:
-  # E-ink display type: waveshare_2in13, waveshare_4in2, etc.
+  # E-ink display type: waveshare_2in13, waveshare_2in13_v2, waveshare_2in9, waveshare_4in2, waveshare_4in26, waveshare_7in5
   type: "waveshare_2in13"
 
   # Display rotation: 0, 90, 180, 270
