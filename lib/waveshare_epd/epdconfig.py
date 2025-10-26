@@ -49,15 +49,38 @@ class RaspberryPi:
     SCLK_PIN = 11
 
     def __init__(self):
-        import spidev
-        import gpiozero
+        # Delay hardware imports until actually needed
+        # This allows the code to load on non-Pi systems or systems without hardware dependencies
+        self.SPI = None
+        self.GPIO_RST_PIN = None
+        self.GPIO_DC_PIN = None
+        self.GPIO_PWR_PIN = None
+        self.GPIO_BUSY_PIN = None
+        self._hardware_initialized = False
 
-        self.SPI = spidev.SpiDev()
-        self.GPIO_RST_PIN = gpiozero.LED(self.RST_PIN)
-        self.GPIO_DC_PIN = gpiozero.LED(self.DC_PIN)
-        # self.GPIO_CS_PIN = gpiozero.LED(self.CS_PIN)
-        self.GPIO_PWR_PIN = gpiozero.LED(self.PWR_PIN)
-        self.GPIO_BUSY_PIN = gpiozero.Button(self.BUSY_PIN, pull_up = False)
+    def _init_hardware(self):
+        """Initialize hardware components (GPIO and SPI). Only called when actually using the display."""
+        if self._hardware_initialized:
+            return
+
+        try:
+            import spidev
+            import gpiozero
+
+            self.SPI = spidev.SpiDev()
+            self.GPIO_RST_PIN = gpiozero.LED(self.RST_PIN)
+            self.GPIO_DC_PIN = gpiozero.LED(self.DC_PIN)
+            # self.GPIO_CS_PIN = gpiozero.LED(self.CS_PIN)
+            self.GPIO_PWR_PIN = gpiozero.LED(self.PWR_PIN)
+            self.GPIO_BUSY_PIN = gpiozero.Button(self.BUSY_PIN, pull_up = False)
+            self._hardware_initialized = True
+            logger.info("Hardware initialization successful (spidev and gpiozero loaded)")
+        except ImportError as e:
+            raise ImportError(
+                f"Failed to import required hardware libraries: {e}\n"
+                "Please install with: pip install spidev gpiozero\n"
+                "Note: These are only required when running on actual Raspberry Pi hardware."
+            )
 
     def digital_write(self, pin, value):
         if pin == self.RST_PIN:
@@ -112,6 +135,9 @@ class RaspberryPi:
         return self.DEV_SPI.DEV_SPI_ReadData()
 
     def module_init(self, cleanup=False):
+        # Initialize hardware on first use
+        self._init_hardware()
+
         self.GPIO_PWR_PIN.on()
 
         if cleanup:
@@ -169,23 +195,41 @@ class JetsonNano:
     PWR_PIN = 18
 
     def __init__(self):
-        import ctypes
-        find_dirs = [
-            os.path.dirname(os.path.realpath(__file__)),
-            '/usr/local/lib',
-            '/usr/lib',
-        ]
+        # Delay hardware imports until actually needed
         self.SPI = None
-        for find_dir in find_dirs:
-            so_filename = os.path.join(find_dir, 'sysfs_software_spi.so')
-            if os.path.exists(so_filename):
-                self.SPI = ctypes.cdll.LoadLibrary(so_filename)
-                break
-        if self.SPI is None:
-            raise RuntimeError('Cannot find sysfs_software_spi.so')
+        self.GPIO = None
+        self._hardware_initialized = False
 
-        import Jetson.GPIO
-        self.GPIO = Jetson.GPIO
+    def _init_hardware(self):
+        """Initialize hardware components (GPIO and SPI). Only called when actually using the display."""
+        if self._hardware_initialized:
+            return
+
+        try:
+            import ctypes
+            find_dirs = [
+                os.path.dirname(os.path.realpath(__file__)),
+                '/usr/local/lib',
+                '/usr/lib',
+            ]
+            self.SPI = None
+            for find_dir in find_dirs:
+                so_filename = os.path.join(find_dir, 'sysfs_software_spi.so')
+                if os.path.exists(so_filename):
+                    self.SPI = ctypes.cdll.LoadLibrary(so_filename)
+                    break
+            if self.SPI is None:
+                raise RuntimeError('Cannot find sysfs_software_spi.so')
+
+            import Jetson.GPIO
+            self.GPIO = Jetson.GPIO
+            self._hardware_initialized = True
+            logger.info("Hardware initialization successful (Jetson.GPIO loaded)")
+        except (ImportError, RuntimeError) as e:
+            raise ImportError(
+                f"Failed to import required hardware libraries: {e}\n"
+                "Note: These are only required when running on actual Jetson Nano hardware."
+            )
 
     def digital_write(self, pin, value):
         self.GPIO.output(pin, value)
@@ -204,6 +248,9 @@ class JetsonNano:
             self.SPI.SYSFS_software_spi_transfer(data[i])
 
     def module_init(self):
+        # Initialize hardware on first use
+        self._init_hardware()
+
         self.GPIO.setmode(self.GPIO.BCM)
         self.GPIO.setwarnings(False)
         self.GPIO.setup(self.RST_PIN, self.GPIO.OUT)
@@ -239,11 +286,30 @@ class SunriseX3:
     Flag = 0
 
     def __init__(self):
-        import spidev
-        import Hobot.GPIO
+        # Delay hardware imports until actually needed
+        self.GPIO = None
+        self.SPI = None
+        self._hardware_initialized = False
 
-        self.GPIO = Hobot.GPIO
-        self.SPI = spidev.SpiDev()
+    def _init_hardware(self):
+        """Initialize hardware components (GPIO and SPI). Only called when actually using the display."""
+        if self._hardware_initialized:
+            return
+
+        try:
+            import spidev
+            import Hobot.GPIO
+
+            self.GPIO = Hobot.GPIO
+            self.SPI = spidev.SpiDev()
+            self._hardware_initialized = True
+            logger.info("Hardware initialization successful (spidev and Hobot.GPIO loaded)")
+        except ImportError as e:
+            raise ImportError(
+                f"Failed to import required hardware libraries: {e}\n"
+                "Please install with: pip install spidev\n"
+                "Note: These are only required when running on actual SunriseX3 hardware."
+            )
 
     def digital_write(self, pin, value):
         self.GPIO.output(pin, value)
@@ -263,6 +329,9 @@ class SunriseX3:
         self.SPI.xfer3(data)
 
     def module_init(self):
+        # Initialize hardware on first use
+        self._init_hardware()
+
         if self.Flag == 0:
             self.Flag = 1
             self.GPIO.setmode(self.GPIO.BCM)
@@ -296,6 +365,41 @@ class SunriseX3:
         self.GPIO.cleanup([self.RST_PIN, self.DC_PIN, self.CS_PIN, self.BUSY_PIN], self.PWR_PIN)
 
 
+class MockPlatform:
+    """Mock platform for testing without hardware."""
+    # Pin definition
+    RST_PIN = 17
+    DC_PIN = 25
+    CS_PIN = 8
+    BUSY_PIN = 24
+    PWR_PIN = 18
+
+    def __init__(self):
+        logger.info("Mock platform initialized (no physical hardware)")
+
+    def digital_write(self, pin, value):
+        pass
+
+    def digital_read(self, pin):
+        return 0
+
+    def delay_ms(self, delaytime):
+        time.sleep(delaytime / 1000.0)
+
+    def spi_writebyte(self, data):
+        pass
+
+    def spi_writebyte2(self, data):
+        pass
+
+    def module_init(self, cleanup=False):
+        logger.debug("Mock platform: module_init")
+        return 0
+
+    def module_exit(self, cleanup=False):
+        logger.debug("Mock platform: module_exit")
+
+
 if sys.version_info[0] == 2:
     process = subprocess.Popen("cat /proc/cpuinfo | grep Raspberry", shell=True, stdout=subprocess.PIPE)
 else:
@@ -304,12 +408,31 @@ output, _ = process.communicate()
 if sys.version_info[0] == 2:
     output = output.decode(sys.stdout.encoding)
 
-if "Raspberry" in output:
-    implementation = RaspberryPi()
-elif os.path.exists('/sys/bus/platform/drivers/gpio-x3'):
-    implementation = SunriseX3()
-else:
-    implementation = JetsonNano()
+# Detect platform and create appropriate implementation
+# Use MockPlatform for testing on non-hardware systems
+try:
+    if "Raspberry" in output:
+        implementation = RaspberryPi()
+        logger.info("Detected Raspberry Pi platform")
+    elif os.path.exists('/sys/bus/platform/drivers/gpio-x3'):
+        implementation = SunriseX3()
+        logger.info("Detected SunriseX3 platform")
+    elif os.path.exists('/proc/device-tree/model'):
+        # Check for Jetson
+        with open('/proc/device-tree/model', 'r') as f:
+            model = f.read()
+            if 'Jetson' in model:
+                implementation = JetsonNano()
+                logger.info("Detected Jetson Nano platform")
+            else:
+                implementation = MockPlatform()
+                logger.info("Unknown platform, using mock implementation")
+    else:
+        implementation = MockPlatform()
+        logger.info("No hardware detected, using mock implementation")
+except Exception as e:
+    logger.warning(f"Platform detection failed: {e}, using mock implementation")
+    implementation = MockPlatform()
 
 for func in [x for x in dir(implementation) if not x.startswith('_')]:
     setattr(sys.modules[__name__], func, getattr(implementation, func))
