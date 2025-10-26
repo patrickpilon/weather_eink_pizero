@@ -50,7 +50,7 @@ This application is specifically optimized for the Raspberry Pi Zero's limited r
 ## Hardware Requirements
 
 - **Raspberry Pi Zero** (W or WH recommended for WiFi)
-- **E-Ink Display** (tested with Waveshare 2.13", compatible with others)
+- **E-Ink Display** (Waveshare 4.26" 800x480, compatible with other Waveshare displays)
 - **Power Supply** (5V micro USB, 2A+ recommended)
 - **SD Card** (8GB+ recommended, Class 10)
 
@@ -65,7 +65,7 @@ This application is specifically optimized for the Raspberry Pi Zero's limited r
 ### Quick Install
 
 ```bash
-git clone https://github.com/yourusername/weather_eink_pizero.git
+git clone https://github.com/patrickpilon/weather_eink_pizero.git
 cd weather_eink_pizero
 chmod +x install.sh
 ./install.sh
@@ -288,6 +288,7 @@ Typical resource usage on Raspberry Pi Zero:
 ## Display Support
 
 ### Tested Displays
+- Waveshare 4.26" (800x480) - **Default**
 - Waveshare 2.13" (250x122)
 - Waveshare 2.9" (296x128)
 - Waveshare 4.2" (400x300)
@@ -369,7 +370,7 @@ MIT License - feel free to use and modify
 ## Support
 
 For issues, questions, or contributions:
-- GitHub Issues: https://github.com/yourusername/weather_eink_pizero/issues
+- GitHub Issues: https://github.com/patrickpilon/weather_eink_pizero/issues
 - Documentation: See `docs/` directory
 
 ---
