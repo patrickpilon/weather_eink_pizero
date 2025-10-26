@@ -241,8 +241,16 @@ class DisplayController:
 
             # Initialize display
             if hasattr(self.display_driver, 'init') and not isinstance(self.display_driver, MockDisplayDriver):
-                self.display_driver.init()
-                logger.info("Display driver initialized")
+                result = self.display_driver.init()
+                if result == 0:
+                    logger.info("Display driver initialized successfully")
+                elif result == -1:
+                    logger.error("Display driver initialization failed (returned -1)")
+                    logger.error("Check hardware connections and SPI configuration")
+                    raise RuntimeError("Display initialization failed")
+                else:
+                    logger.warning(f"Display driver init returned unexpected value: {result}")
+                    logger.info("Display driver initialized (with warnings)")
 
         except ImportError as e:
             error_msg = str(e)
@@ -284,7 +292,9 @@ class DisplayController:
                 return False
 
             # Initialize display driver if needed
+            logger.debug("Initializing display driver...")
             self._init_display_driver()
+            logger.debug(f"Display driver ready: {type(self.display_driver).__name__}")
 
             # Determine refresh mode
             use_partial = (
@@ -445,26 +455,42 @@ class DisplayController:
 
     def _display_partial_refresh(self, image: Image.Image) -> None:
         """Perform partial display refresh (faster)."""
-        if hasattr(self.display_driver, 'display_Partial'):
-            # Waveshare drivers use getbuffer method
-            buffer = self._image_to_buffer(image)
-            self.display_driver.display_Partial(buffer)
-        elif hasattr(self.display_driver, 'display_partial'):
-            # Alternative method name
-            buffer = self._image_to_buffer(image)
-            self.display_driver.display_partial(buffer)
-        else:
-            # Fallback to full refresh
-            self._display_full_refresh(image)
+        try:
+            if hasattr(self.display_driver, 'display_Partial'):
+                # Waveshare drivers use getbuffer method
+                buffer = self._image_to_buffer(image)
+                logger.debug(f"Calling display_Partial with {len(buffer)} byte buffer")
+                self.display_driver.display_Partial(buffer)
+                logger.debug("display_Partial completed")
+            elif hasattr(self.display_driver, 'display_partial'):
+                # Alternative method name
+                buffer = self._image_to_buffer(image)
+                logger.debug(f"Calling display_partial with {len(buffer)} byte buffer")
+                self.display_driver.display_partial(buffer)
+                logger.debug("display_partial completed")
+            else:
+                # Fallback to full refresh
+                logger.debug("No partial refresh method found, using full refresh")
+                self._display_full_refresh(image)
+        except Exception as e:
+            logger.error(f"Partial refresh failed: {e}", exc_info=True)
+            raise
 
     def _display_full_refresh(self, image: Image.Image) -> None:
         """Perform full display refresh (cleaner)."""
-        if hasattr(self.display_driver, 'display'):
-            # Convert PIL image to format expected by driver
-            buffer = self._image_to_buffer(image)
-            self.display_driver.display(buffer)
-        else:
-            logger.warning("Display driver has no display method")
+        try:
+            if hasattr(self.display_driver, 'display'):
+                # Convert PIL image to format expected by driver
+                buffer = self._image_to_buffer(image)
+                logger.debug(f"Calling display with {len(buffer)} byte buffer")
+                self.display_driver.display(buffer)
+                logger.debug("Full display refresh completed")
+            else:
+                logger.warning("Display driver has no display method")
+                raise AttributeError("Display driver missing 'display' method")
+        except Exception as e:
+            logger.error(f"Full refresh failed: {e}", exc_info=True)
+            raise
 
     def _image_to_buffer(self, image: Image.Image) -> bytes:
         """Convert PIL image to byte buffer for display driver."""
