@@ -84,15 +84,25 @@ class WeatherEInkApp:
             sys.exit(1)
 
     def _setup_logging(self):
-        """Setup logging configuration."""
+        """Setup logging configuration with fallback for permission issues."""
         log_config = self.config.get('logging', {})
         log_level = getattr(logging, log_config.get('level', 'INFO'))
         log_file = log_config.get('file', 'app.log')
 
-        # Create log directory if needed
+        # Try to create log directory if needed
         log_dir = os.path.dirname(log_file)
         if log_dir and not os.path.exists(log_dir):
-            os.makedirs(log_dir, exist_ok=True)
+            try:
+                os.makedirs(log_dir, exist_ok=True)
+            except PermissionError:
+                # Fallback to local logs directory if we can't write to system location
+                print(f"Warning: Cannot create log directory {log_dir} (permission denied)")
+                local_log_dir = os.path.join(os.path.dirname(__file__), 'logs')
+                log_file = os.path.join(local_log_dir, os.path.basename(log_file))
+                print(f"Falling back to local log directory: {log_file}")
+
+                # Create local logs directory
+                os.makedirs(local_log_dir, exist_ok=True)
 
         # Configure logging
         logging.basicConfig(
