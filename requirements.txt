@@ -18,9 +18,15 @@ cachetools>=5.3.0,<6.0.0
 
 # E-ink display drivers
 # Note: Waveshare drivers are included in lib/ directory
-# Hardware-specific dependencies (only needed on Raspberry Pi):
-#   pip install spidev gpiozero
-# These are automatically detected and only required when running on actual hardware
+
+# Hardware-specific dependencies (only needed on Raspberry Pi hardware)
+# Uncomment these lines if running on actual Raspberry Pi with e-ink display:
+# spidev>=3.5
+# gpiozero>=1.6.2
+#
+# Install with: pip install spidev gpiozero
+# Note: These will fail to install on non-Pi systems, which is expected.
+# The application will run in mock mode without these dependencies.
 
 # System monitoring (optional, for performance tracking)
 psutil>=5.9.0,<6.0.0

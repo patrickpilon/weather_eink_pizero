@@ -93,10 +93,16 @@ source venv/bin/activate
 # 3. Install Python dependencies
 pip install -r requirements.txt
 
-# 4. Configure application
+# 4. Install hardware dependencies (ONLY on Raspberry Pi with display)
+# Skip this step if testing on development machine
+pip install -r requirements-hardware.txt
+
+# 5. Configure application
 cp config.yaml.example config.yaml
 nano config.yaml  # Edit with your settings
 ```
+
+**Note about hardware dependencies**: The application requires `spidev` and `gpiozero` libraries when running on actual Raspberry Pi hardware with an e-ink display. These are installed via `requirements-hardware.txt`. If you're testing on a development machine, skip this step - the application will automatically run in mock mode without the hardware libraries.
 
 ## Configuration
 

@@ -245,8 +245,16 @@ class DisplayController:
                 logger.info("Display driver initialized")
 
         except ImportError as e:
-            logger.error(f"Failed to import display driver: {e}")
-            logger.info("Using mock display driver (no physical display)")
+            error_msg = str(e)
+            if 'spidev' in error_msg or 'gpiozero' in error_msg:
+                # Expected error when hardware dependencies are not installed
+                logger.warning("Hardware dependencies not installed (spidev/gpiozero)")
+                logger.info("Install with: pip install spidev gpiozero")
+                logger.info("Using mock display driver (no physical display)")
+            else:
+                # Unexpected import error
+                logger.error(f"Failed to import display driver: {e}")
+                logger.info("Using mock display driver")
             self.display_driver = MockDisplayDriver()
         except Exception as e:
             logger.error(f"Failed to initialize display: {e}")

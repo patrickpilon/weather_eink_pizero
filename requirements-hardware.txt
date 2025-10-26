@@ -1,0 +1,14 @@
+# Hardware-specific dependencies for Raspberry Pi
+# Install these ONLY on Raspberry Pi hardware with e-ink display
+#
+# Usage:
+#   pip install -r requirements-hardware.txt
+#
+# Note: These packages will fail to install on non-Raspberry Pi systems
+# and are not required for testing/development on other platforms.
+
+# SPI interface for e-ink display
+spidev>=3.5
+
+# GPIO control library
+gpiozero>=1.6.2
