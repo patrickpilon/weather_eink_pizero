@@ -3,14 +3,17 @@
 
 # Weather API Configuration
 weather:
-  # API provider: openweathermap, weatherapi, etc.
-  provider: "openweathermap"
+  # API provider: openweathermap, weatherapi, openmeteo
+  # openmeteo is free and doesn't require an API key (recommended)
+  provider: "openmeteo"
+
+  # API key (not needed for openmeteo)
   api_key: "YOUR_API_KEY_HERE"
 
   # Location
-  latitude: 40.7128
-  longitude: -74.0060
-  city: "New York"
+  latitude: -23.55
+  longitude: -46.63
+  location_name: "São Paulo"  # Used for openmeteo display
 
   # Units: metric, imperial
   units: "metric"
